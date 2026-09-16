@@ -126,6 +126,8 @@
             <button class="rxn-btn px-4 py-2 rounded-full font-semibold transition-colors bg-emerald-500 text-white shadow" data-rxn="nh3">NH₃ + H₂O</button>
             <button class="rxn-btn px-4 py-2 rounded-full font-semibold transition-colors bg-gray-100 text-gray-600 hover:bg-gray-200" data-rxn="hcl">HCl + H₂O</button>
             <button class="rxn-btn px-4 py-2 rounded-full font-semibold transition-colors bg-gray-100 text-gray-600 hover:bg-gray-200" data-rxn="co3">CO₃²⁻ + H₂O</button>
+            <button class="rxn-btn px-4 py-2 rounded-full font-semibold transition-colors bg-gray-100 text-gray-600 hover:bg-gray-200" data-rxn="hco3_acid">HCO₃⁻ (Acid) + H₂O</button>
+            <button class="rxn-btn px-4 py-2 rounded-full font-semibold transition-colors bg-gray-100 text-gray-600 hover:bg-gray-200" data-rxn="hco3_base">HCO₃⁻ (Base) + H₂O</button>
         </div>
 
         <!-- Interactive Simulation Area -->
@@ -237,6 +239,46 @@
                 lbl2End: 'OH⁻ (Base liên hợp)<br><span class="text-xs font-normal">Đã mất H⁺</span>',
                 col1: 'text-blue-600', col2: 'text-red-600', col1End: 'text-blue-800', col2End: 'text-red-800',
                 protonOrigin: 'm2' // Proton starts at M2 (H2O)
+            },
+            'hco3_acid': {
+                eqHTML: `
+                    <div id="eq-reactants" class="transition-opacity duration-500">
+                        <span class="eq-acid">HCO₃⁻</span> + <span class="eq-base">H₂O</span>
+                    </div>
+                    <div class="flex items-center text-gray-400 mx-2"><span class="text-2xl">⇌</span></div>
+                    <div id="eq-products" class="opacity-50 transition-opacity duration-500">
+                        <span class="eq-cb">CO₃²⁻</span> + <span class="eq-ca">H₃O⁺</span>
+                    </div>
+                `,
+                explStart: 'Nhấn "Thực hiện phản ứng" để quan sát sự di chuyển của Proton (H⁺).',
+                explMid: 'Ion Bicarbonate (<span class="text-red-600 font-bold">Acid</span>) đang nhường 1 Proton (H⁺) cho phân tử Nước (<span class="text-blue-600 font-bold">Base</span>)...',
+                explEnd: 'Phản ứng hoàn tất! HCO₃⁻ thể hiện tính <strong>Acid</strong>.<br>HCO₃⁻ nhường H⁺ trở thành ion Carbonate (<strong class="text-red-700">CO₃²⁻</strong>).<br>H₂O nhận H⁺ trở thành ion Hydronium (<strong class="text-blue-700">H₃O⁺</strong>).',
+                lbl1Start: 'HCO₃⁻ (Acid)<br><span class="text-xs font-normal">Cho proton</span>',
+                lbl2Start: 'H₂O (Base)<br><span class="text-xs font-normal">Nhận proton</span>',
+                lbl1End: 'CO₃²⁻ (Base liên hợp)<br><span class="text-xs font-normal">Đã mất H⁺</span>',
+                lbl2End: 'H₃O⁺ (Acid liên hợp)<br><span class="text-xs font-normal">Đã nhận H⁺</span>',
+                col1: 'text-red-600', col2: 'text-blue-600', col1End: 'text-red-800', col2End: 'text-blue-800',
+                protonOrigin: 'm1' // Proton starts at M1 (HCO3-)
+            },
+            'hco3_base': {
+                eqHTML: `
+                    <div id="eq-reactants" class="transition-opacity duration-500">
+                        <span class="eq-base">HCO₃⁻</span> + <span class="eq-acid">H₂O</span>
+                    </div>
+                    <div class="flex items-center text-gray-400 mx-2"><span class="text-2xl">⇌</span></div>
+                    <div id="eq-products" class="opacity-50 transition-opacity duration-500">
+                        <span class="eq-ca">H₂CO₃</span> + <span class="eq-cb">OH⁻</span>
+                    </div>
+                `,
+                explStart: 'Nhấn "Thực hiện phản ứng" để quan sát sự di chuyển của Proton (H⁺).',
+                explMid: 'Phân tử Nước (<span class="text-red-600 font-bold">Acid</span>) đang nhường 1 Proton (H⁺) cho ion Bicarbonate (<span class="text-blue-600 font-bold">Base</span>)...',
+                explEnd: 'Phản ứng hoàn tất! HCO₃⁻ thể hiện tính <strong>Base</strong>.<br>H₂O nhường H⁺ trở thành ion Hydroxide (<strong class="text-red-700">OH⁻</strong>).<br>HCO₃⁻ nhận H⁺ trở thành phân tử Carbonic Acid (<strong class="text-blue-700">H₂CO₃</strong>).',
+                lbl1Start: 'HCO₃⁻ (Base)<br><span class="text-xs font-normal">Nhận proton</span>',
+                lbl2Start: 'H₂O (Acid)<br><span class="text-xs font-normal">Cho proton</span>',
+                lbl1End: 'H₂CO₃ (Acid liên hợp)<br><span class="text-xs font-normal">Đã nhận H⁺</span>',
+                lbl2End: 'OH⁻ (Base liên hợp)<br><span class="text-xs font-normal">Đã mất H⁺</span>',
+                col1: 'text-blue-600', col2: 'text-red-600', col1End: 'text-blue-800', col2End: 'text-red-800',
+                protonOrigin: 'm2' // Proton starts at M2 (H2O)
             }
         };
 
@@ -291,26 +333,34 @@
                 m2.appendChild(hNormal); m2.appendChild(sharedProton); 
                 m2.appendChild(oAtom); m2.appendChild(m2Label);
                 simArea.appendChild(m2);
-
-            } else if (currentRxn === 'hcl') {
-                // --- HCl ---
+            } else if (currentRxn === 'hco3_acid') {
+                // --- HCO3- (Acid) ---
                 m1 = document.createElement('div');
                 m1.className = 'molecule show-label';
                 m1.style.left = '20%'; m1.style.top = '50%';
                 
-                const clAtom = document.createElement('div');
-                clAtom.className = 'atom atom-cl'; clAtom.innerText = 'Cl';
+                const cAtom = document.createElement('div');
+                cAtom.className = 'atom atom-c'; cAtom.innerText = 'C';
                 
-                sharedProton.style.transform = `translate(40px, 0px)`; // On right of Cl
+                // Add 3 O atoms.
+                [{x:0, y:-45}, {x:-40, y:30}, {x:40, y:30}].forEach(pos => {
+                    const o = document.createElement('div');
+                    o.className = 'atom atom-o'; o.innerText = 'O';
+                    o.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+                    m1.appendChild(o);
+                });
+                
+                // Proton attached to the right-most O initially
+                sharedProton.style.transform = `translate(65px, 30px)`;
                 
                 const m1Label = document.createElement('div');
                 m1Label.className = `label ${conf.col1} m1-label`; m1Label.innerHTML = conf.lbl1Start;
                 
                 m1.appendChild(sharedProton);
-                m1.appendChild(clAtom); m1.appendChild(m1Label);
+                m1.appendChild(cAtom); m1.appendChild(m1Label);
                 simArea.appendChild(m1);
 
-                // --- H2O ---
+                // --- H2O (Base) ---
                 m2 = document.createElement('div');
                 m2.className = 'molecule show-label';
                 m2.style.left = '70%'; m2.style.top = '50%';
@@ -331,8 +381,8 @@
                 m2.appendChild(oAtom); m2.appendChild(m2Label);
                 simArea.appendChild(m2);
 
-            } else if (currentRxn === 'co3') {
-                // --- CO3 2- ---
+            } else if (currentRxn === 'hco3_base') {
+                // --- HCO3- (Base) ---
                 m1 = document.createElement('div');
                 m1.className = 'molecule show-label';
                 m1.style.left = '20%'; m1.style.top = '50%';
@@ -340,13 +390,18 @@
                 const cAtom = document.createElement('div');
                 cAtom.className = 'atom atom-c'; cAtom.innerText = 'C';
                 
-                // Add 3 O atoms. We will target the right-most one
+                // Add 3 O atoms. Left O has an H. Right O will receive H+.
                 [{x:0, y:-45}, {x:-40, y:30}].forEach(pos => {
                     const o = document.createElement('div');
                     o.className = 'atom atom-o'; o.innerText = 'O';
                     o.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
                     m1.appendChild(o);
                 });
+
+                const leftH = document.createElement('div');
+                leftH.className = 'atom atom-h'; leftH.innerText = 'H';
+                leftH.style.transform = `translate(-65px, 30px)`;
+                m1.appendChild(leftH);
                 
                 const targetO = document.createElement('div');
                 targetO.className = 'atom atom-o target-node'; targetO.innerText = 'O';
@@ -359,7 +414,7 @@
                 m1.appendChild(cAtom); m1.appendChild(m1Label);
                 simArea.appendChild(m1);
 
-                // --- H2O ---
+                // --- H2O (Acid) ---
                 m2 = document.createElement('div');
                 m2.className = 'molecule show-label';
                 m2.style.left = '70%'; m2.style.top = '50%';
@@ -428,9 +483,9 @@
                 // Adjust docking position based on reaction
                 if (currentRxn === 'nh3') {
                     targetX += targetRect.width + 5; // Dock to right of N
-                } else if (currentRxn === 'hcl') {
+                } else if (currentRxn === 'hcl' || currentRxn === 'hco3_acid') {
                     targetX -= (protonRect.width + 5); // Dock to left of O
-                } else if (currentRxn === 'co3') {
+                } else if (currentRxn === 'co3' || currentRxn === 'hco3_base') {
                     targetX += targetRect.width + 5; // Dock to right of target O
                 }
 
@@ -450,9 +505,9 @@
                     // Adjust final internal transform based on reaction
                     if (currentRxn === 'nh3') {
                         sharedProton.style.transform = `translate(45px, 0px)`;
-                    } else if (currentRxn === 'hcl') {
+                    } else if (currentRxn === 'hcl' || currentRxn === 'hco3_acid') {
                         sharedProton.style.transform = `translate(-45px, 0px)`;
-                    } else if (currentRxn === 'co3') {
+                    } else if (currentRxn === 'co3' || currentRxn === 'hco3_base') {
                         sharedProton.style.transform = `translate(65px, 30px)`; // Next to bottom-right O
                     }
                     
