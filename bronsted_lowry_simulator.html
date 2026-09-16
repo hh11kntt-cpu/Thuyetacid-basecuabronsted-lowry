@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô phỏng Thuyết Acid-Base Brønsted-Lowry</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0fdf4; 
+        }
+        
+        #simulation-area {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            background: linear-gradient(to bottom, #ffffff, #e0f2fe);
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .molecule {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 1s ease-in-out;
+            transform-origin: center;
+        }
+
+        .atom {
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            box-shadow: inset -2px -2px 6px rgba(0,0,0,0.3), 2px 2px 5px rgba(0,0,0,0.2);
+            position: absolute;
+        }
+
+        /* Nitrogen (N) */
+        .atom-n { background: radial-gradient(circle at 30% 30%, #60a5fa, #1d4ed8); width: 60px; height: 60px; font-size: 24px; z-index: 10;}
+        /* Oxygen (O) */
+        .atom-o { background: radial-gradient(circle at 30% 30%, #f87171, #b91c1c); width: 60px; height: 60px; font-size: 24px; z-index: 10;}
+        /* Chlorine (Cl) */
+        .atom-cl { background: radial-gradient(circle at 30% 30%, #4ade80, #166534); width: 65px; height: 65px; font-size: 24px; z-index: 10;}
+        /* Carbon (C) */
+        .atom-c { background: radial-gradient(circle at 30% 30%, #9ca3af, #374151); width: 60px; height: 60px; font-size: 24px; z-index: 10;}
+        /* Hydrogen (H) */
+        .atom-h { background: radial-gradient(circle at 30% 30%, #d1d5db, #6b7280); width: 30px; height: 30px; font-size: 14px; z-index: 5; color: #111;}
+        
+        /* Highlighted Proton */
+        .proton-h { 
+            background: radial-gradient(circle at 30% 30%, #fde047, #ca8a04); 
+            color: #000;
+            z-index: 20;
+            transition: all 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .label {
+            position: absolute;
+            top: -100px; /* Nhãn cách phân tử một khoảng an toàn (khoảng 2cm) để không bị che khuất */
+            text-align: center;
+            width: 180px; 
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: 600;
+            color: #374151;
+            opacity: 0;
+            transition: opacity 0.5s;
+            z-index: 30; /* Luôn nổi trên cùng */
+        }
+
+        .show-label .label {
+            opacity: 1;
+        }
+        
+        .equation {
+            font-size: 1.5rem;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+        }
+        .eq-acid { color: #b91c1c; } 
+        .eq-base { color: #1d4ed8; } 
+        .eq-ca { color: #1d4ed8; } 
+        .eq-cb { color: #b91c1c; } 
+        
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(234, 179, 8, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
+        }
+
+        .highlight-proton {
+            animation: pulse-glow 2s infinite;
+            border: 2px solid #fef08a;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 flex flex-col items-center">
+
+<div class="max-w-4xl w-full bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+    
+    <div class="bg-gradient-to-r from-emerald-600 to-teal-500 p-6 text-white text-center">
+        <h1 class="text-3xl font-extrabold mb-1">Thuyết Acid-Base Brønsted-Lowry</h1>
+        <h2 class="text-[15px] font-medium mb-3 text-emerald-100 opacity-90">Thiết kế: Giáo viên Nguyễn Mạnh Hưng - Trường THPT Trại Cau</h2>
+        <p class="text-emerald-100">Mô phỏng sự cho - nhận proton (H⁺)</p>
+    </div>
+
+    <div class="p-6">
+        
+        <!-- Theory Explanation -->
+        <div class="mb-4 bg-emerald-50 p-4 rounded-lg border border-emerald-100 text-gray-700 text-sm md:text-base leading-relaxed">
+            <p>Theo thuyết Brønsted-Lowry:</p>
+            <ul class="list-disc list-inside mt-2 ml-2 space-y-1">
+                <li><strong class="text-red-600">Acid</strong> là chất <strong>cho</strong> proton (H⁺).</li>
+                <li><strong class="text-blue-600">Base</strong> là chất <strong>nhận</strong> proton (H⁺).</li>
+            </ul>
+        </div>
+
+        <!-- Reaction Selector -->
+        <div class="mb-6 flex flex-wrap justify-center gap-3" id="reaction-selector">
+            <button class="rxn-btn px-4 py-2 rounded-full font-semibold transition-colors bg-emerald-500 text-white shadow" data-rxn="nh3">NH₃ + H₂O</button>
+            <button class="rxn-btn px-4 py-2 rounded-full font-semibold transition-colors bg-gray-100 text-gray-600 hover:bg-gray-200" data-rxn="hcl">HCl + H₂O</button>
+            <button class="rxn-btn px-4 py-2 rounded-full font-semibold transition-colors bg-gray-100 text-gray-600 hover:bg-gray-200" data-rxn="co3">CO₃²⁻ + H₂O</button>
+        </div>
+
+        <!-- Interactive Simulation Area -->
+        <div id="simulation-area" class="mb-6">
+            <!-- Molecules will be drawn here by JS -->
+        </div>
+
+        <!-- Chemical Equation Display -->
+        <div id="equation-container" class="text-center mb-8 flex justify-center items-center flex-wrap gap-4 equation bg-gray-50 p-4 rounded-xl border border-gray-200">
+            <!-- Dynamically populated -->
+        </div>
+
+        <!-- Controls -->
+        <div class="flex flex-col sm:flex-row justify-center gap-4">
+            <button id="btn-reset" class="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold rounded-full transition-colors flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+                </svg>
+                Trạng thái ban đầu
+            </button>
+            <button id="btn-react" class="px-8 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold rounded-full shadow-lg transform transition hover:scale-105 flex items-center justify-center gap-2">
+                Thực hiện phản ứng
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                </svg>
+            </button>
+        </div>
+
+        <div id="explanation-box" class="mt-8 text-center p-4 rounded-lg bg-blue-50 text-blue-800 font-medium min-h-[80px] flex items-center justify-center border border-blue-100 transition-all duration-300">
+            Nhấn "Thực hiện phản ứng" để quan sát sự di chuyển của Proton (H⁺).
+        </div>
+
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const simArea = document.getElementById('simulation-area');
+        const btnReact = document.getElementById('btn-react');
+        const btnReset = document.getElementById('btn-reset');
+        const explanationBox = document.getElementById('explanation-box');
+        const equationContainer = document.getElementById('equation-container');
+        const rxnBtns = document.querySelectorAll('.rxn-btn');
+        
+        let isReacted = false;
+        let currentRxn = 'nh3'; // default
+
+        // Molecules
+        let m1, m2, sharedProton;
+
+        // Reaction Configurations
+        const rxnConfigs = {
+            'nh3': {
+                eqHTML: `
+                    <div id="eq-reactants" class="transition-opacity duration-500">
+                        <span class="eq-base">NH₃</span> + <span class="eq-acid">H₂O</span>
+                    </div>
+                    <div class="flex items-center text-gray-400 mx-2"><span class="text-2xl">⇌</span></div>
+                    <div id="eq-products" class="opacity-50 transition-opacity duration-500">
+                        <span class="eq-ca">NH₄⁺</span> + <span class="eq-cb">OH⁻</span>
+                    </div>
+                `,
+                explStart: 'Nhấn "Thực hiện phản ứng" để quan sát sự di chuyển của Proton (H⁺).',
+                explMid: 'Phân tử Nước (<span class="text-red-600 font-bold">Acid</span>) đang nhường 1 Proton (H⁺) cho phân tử Ammonia (<span class="text-blue-600 font-bold">Base</span>)...',
+                explEnd: 'Phản ứng hoàn tất!<br>H₂O nhường H⁺ trở thành ion Hydroxide (<strong class="text-red-700">OH⁻</strong>).<br>NH₃ nhận H⁺ trở thành ion Ammonium (<strong class="text-blue-700">NH₄⁺</strong>).',
+                lbl1Start: 'NH₃ (Base)<br><span class="text-xs font-normal">Nhận proton</span>',
+                lbl2Start: 'H₂O (Acid)<br><span class="text-xs font-normal">Cho proton</span>',
+                lbl1End: 'NH₄⁺ (Acid liên hợp)<br><span class="text-xs font-normal">Đã nhận H⁺</span>',
+                lbl2End: 'OH⁻ (Base liên hợp)<br><span class="text-xs font-normal">Đã mất H⁺</span>',
+                col1: 'text-blue-600', col2: 'text-red-600', col1End: 'text-blue-800', col2End: 'text-red-800',
+                protonOrigin: 'm2' // Proton starts at M2 (H2O)
+            },
+            'hcl': {
+                eqHTML: `
+                    <div id="eq-reactants" class="transition-opacity duration-500">
+                        <span class="eq-acid">HCl</span> + <span class="eq-base">H₂O</span>
+                    </div>
+                    <div class="flex items-center text-gray-400 mx-2"><span class="text-2xl">→</span></div>
+                    <div id="eq-products" class="opacity-50 transition-opacity duration-500">
+                        <span class="eq-cb">Cl⁻</span> + <span class="eq-ca">H₃O⁺</span>
+                    </div>
+                `,
+                explStart: 'Nhấn "Thực hiện phản ứng" để quan sát sự di chuyển của Proton (H⁺).',
+                explMid: 'Phân tử HCl (<span class="text-red-600 font-bold">Acid</span>) đang nhường 1 Proton (H⁺) cho phân tử Nước (<span class="text-blue-600 font-bold">Base</span>)...',
+                explEnd: 'Phản ứng hoàn tất!<br>HCl nhường H⁺ trở thành ion Chloride (<strong class="text-red-700">Cl⁻</strong>).<br>H₂O nhận H⁺ trở thành ion Hydronium (<strong class="text-blue-700">H₃O⁺</strong>).',
+                lbl1Start: 'HCl (Acid)<br><span class="text-xs font-normal">Cho proton</span>',
+                lbl2Start: 'H₂O (Base)<br><span class="text-xs font-normal">Nhận proton</span>',
+                lbl1End: 'Cl⁻ (Base liên hợp)<br><span class="text-xs font-normal">Đã mất H⁺</span>',
+                lbl2End: 'H₃O⁺ (Acid liên hợp)<br><span class="text-xs font-normal">Đã nhận H⁺</span>',
+                col1: 'text-red-600', col2: 'text-blue-600', col1End: 'text-red-800', col2End: 'text-blue-800',
+                protonOrigin: 'm1' // Proton starts at M1 (HCl)
+            },
+            'co3': {
+                eqHTML: `
+                    <div id="eq-reactants" class="transition-opacity duration-500">
+                        <span class="eq-base">CO₃²⁻</span> + <span class="eq-acid">H₂O</span>
+                    </div>
+                    <div class="flex items-center text-gray-400 mx-2"><span class="text-2xl">⇌</span></div>
+                    <div id="eq-products" class="opacity-50 transition-opacity duration-500">
+                        <span class="eq-ca">HCO₃⁻</span> + <span class="eq-cb">OH⁻</span>
+                    </div>
+                `,
+                explStart: 'Nhấn "Thực hiện phản ứng" để quan sát sự di chuyển của Proton (H⁺).',
+                explMid: 'Phân tử Nước (<span class="text-red-600 font-bold">Acid</span>) đang nhường 1 Proton (H⁺) cho ion Carbonate (<span class="text-blue-600 font-bold">Base</span>)...',
+                explEnd: 'Phản ứng hoàn tất!<br>H₂O nhường H⁺ trở thành ion Hydroxide (<strong class="text-red-700">OH⁻</strong>).<br>CO₃²⁻ nhận H⁺ trở thành ion Bicarbonate (<strong class="text-blue-700">HCO₃⁻</strong>).',
+                lbl1Start: 'CO₃²⁻ (Base)<br><span class="text-xs font-normal">Nhận proton</span>',
+                lbl2Start: 'H₂O (Acid)<br><span class="text-xs font-normal">Cho proton</span>',
+                lbl1End: 'HCO₃⁻ (Acid liên hợp)<br><span class="text-xs font-normal">Đã nhận H⁺</span>',
+                lbl2End: 'OH⁻ (Base liên hợp)<br><span class="text-xs font-normal">Đã mất H⁺</span>',
+                col1: 'text-blue-600', col2: 'text-red-600', col1End: 'text-blue-800', col2End: 'text-red-800',
+                protonOrigin: 'm2' // Proton starts at M2 (H2O)
+            }
+        };
+
+        function setupMolecules() {
+            simArea.innerHTML = ''; 
+            const conf = rxnConfigs[currentRxn];
+            
+            // Create shared proton
+            sharedProton = document.createElement('div');
+            sharedProton.className = 'atom atom-h proton-h highlight-proton';
+            sharedProton.innerText = 'H⁺';
+
+            if (currentRxn === 'nh3') {
+                // --- NH3 ---
+                m1 = document.createElement('div');
+                m1.className = 'molecule show-label';
+                m1.style.left = '20%'; m1.style.top = '50%';
+                
+                const nAtom = document.createElement('div');
+                nAtom.className = 'atom atom-n target-node'; nAtom.innerText = 'N';
+                
+                [{x:-35, y:20}, {x:35, y:20}, {x:0, y:-40}].forEach(pos => {
+                    const h = document.createElement('div');
+                    h.className = 'atom atom-h'; h.innerText = 'H';
+                    h.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+                    m1.appendChild(h);
+                });
+                
+                const m1Label = document.createElement('div');
+                m1Label.className = `label ${conf.col1} m1-label`; m1Label.innerHTML = conf.lbl1Start;
+                
+                m1.appendChild(nAtom); m1.appendChild(m1Label);
+                simArea.appendChild(m1);
+
+                // --- H2O ---
+                m2 = document.createElement('div');
+                m2.className = 'molecule show-label';
+                m2.style.left = '70%'; m2.style.top = '50%';
+                
+                const oAtom = document.createElement('div');
+                oAtom.className = 'atom atom-o'; oAtom.innerText = 'O';
+                
+                const hNormal = document.createElement('div');
+                hNormal.className = 'atom atom-h'; hNormal.innerText = 'H';
+                hNormal.style.transform = `translate(35px, 20px)`;
+                
+                sharedProton.style.transform = `translate(-35px, 0px)`; // On left of O
+                
+                const m2Label = document.createElement('div');
+                m2Label.className = `label ${conf.col2} m2-label`; m2Label.innerHTML = conf.lbl2Start;
+                
+                m2.appendChild(hNormal); m2.appendChild(sharedProton); 
+                m2.appendChild(oAtom); m2.appendChild(m2Label);
+                simArea.appendChild(m2);
+
+            } else if (currentRxn === 'hcl') {
+                // --- HCl ---
+                m1 = document.createElement('div');
+                m1.className = 'molecule show-label';
+                m1.style.left = '20%'; m1.style.top = '50%';
+                
+                const clAtom = document.createElement('div');
+                clAtom.className = 'atom atom-cl'; clAtom.innerText = 'Cl';
+                
+                sharedProton.style.transform = `translate(40px, 0px)`; // On right of Cl
+                
+                const m1Label = document.createElement('div');
+                m1Label.className = `label ${conf.col1} m1-label`; m1Label.innerHTML = conf.lbl1Start;
+                
+                m1.appendChild(sharedProton);
+                m1.appendChild(clAtom); m1.appendChild(m1Label);
+                simArea.appendChild(m1);
+
+                // --- H2O ---
+                m2 = document.createElement('div');
+                m2.className = 'molecule show-label';
+                m2.style.left = '70%'; m2.style.top = '50%';
+                
+                const oAtom = document.createElement('div');
+                oAtom.className = 'atom atom-o target-node'; oAtom.innerText = 'O';
+                
+                [{x:35, y:20}, {x:0, y:-40}].forEach(pos => {
+                    const h = document.createElement('div');
+                    h.className = 'atom atom-h'; h.innerText = 'H';
+                    h.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+                    m2.appendChild(h);
+                });
+                
+                const m2Label = document.createElement('div');
+                m2Label.className = `label ${conf.col2} m2-label`; m2Label.innerHTML = conf.lbl2Start;
+                
+                m2.appendChild(oAtom); m2.appendChild(m2Label);
+                simArea.appendChild(m2);
+
+            } else if (currentRxn === 'co3') {
+                // --- CO3 2- ---
+                m1 = document.createElement('div');
+                m1.className = 'molecule show-label';
+                m1.style.left = '20%'; m1.style.top = '50%';
+                
+                const cAtom = document.createElement('div');
+                cAtom.className = 'atom atom-c'; cAtom.innerText = 'C';
+                
+                // Add 3 O atoms. We will target the right-most one
+                [{x:0, y:-45}, {x:-40, y:30}].forEach(pos => {
+                    const o = document.createElement('div');
+                    o.className = 'atom atom-o'; o.innerText = 'O';
+                    o.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+                    m1.appendChild(o);
+                });
+                
+                const targetO = document.createElement('div');
+                targetO.className = 'atom atom-o target-node'; targetO.innerText = 'O';
+                targetO.style.transform = `translate(40px, 30px)`; // Bottom right
+                m1.appendChild(targetO);
+                
+                const m1Label = document.createElement('div');
+                m1Label.className = `label ${conf.col1} m1-label`; m1Label.innerHTML = conf.lbl1Start;
+                
+                m1.appendChild(cAtom); m1.appendChild(m1Label);
+                simArea.appendChild(m1);
+
+                // --- H2O ---
+                m2 = document.createElement('div');
+                m2.className = 'molecule show-label';
+                m2.style.left = '70%'; m2.style.top = '50%';
+                
+                const oAtom = document.createElement('div');
+                oAtom.className = 'atom atom-o'; oAtom.innerText = 'O';
+                
+                const hNormal = document.createElement('div');
+                hNormal.className = 'atom atom-h'; hNormal.innerText = 'H';
+                hNormal.style.transform = `translate(35px, 20px)`;
+                
+                sharedProton.style.transform = `translate(-35px, 0px)`; // Left of O
+                
+                const m2Label = document.createElement('div');
+                m2Label.className = `label ${conf.col2} m2-label`; m2Label.innerHTML = conf.lbl2Start;
+                
+                m2.appendChild(hNormal); m2.appendChild(sharedProton); 
+                m2.appendChild(oAtom); m2.appendChild(m2Label);
+                simArea.appendChild(m2);
+            }
+        }
+
+        function triggerReaction() {
+            if (isReacted) return;
+            isReacted = true;
+            btnReact.disabled = true;
+            btnReact.classList.add('opacity-50', 'cursor-not-allowed');
+            
+            const conf = rxnConfigs[currentRxn];
+            
+            explanationBox.innerHTML = conf.explMid;
+            explanationBox.className = 'mt-8 text-center p-4 rounded-lg bg-yellow-50 text-yellow-800 font-medium min-h-[80px] flex items-center justify-center border border-yellow-200 transition-all duration-300';
+
+            // 1. Move molecules closer
+            m1.style.left = '35%';
+            m2.style.left = '55%';
+
+            // 2. Animate Proton Transfer
+            setTimeout(() => {
+                const simRect = simArea.getBoundingClientRect();
+                const protonRect = sharedProton.getBoundingClientRect();
+                
+                // Determine target element
+                let targetMolecule = conf.protonOrigin === 'm1' ? m2 : m1;
+                let targetAtom = targetMolecule.querySelector('.target-node');
+                
+                // Calculate absolute pos
+                let startX = protonRect.left - simRect.left;
+                let startY = protonRect.top - simRect.top;
+
+                // Move proton to simulation area context
+                simArea.appendChild(sharedProton);
+                sharedProton.style.position = 'absolute';
+                sharedProton.style.left = `${startX}px`;
+                sharedProton.style.top = `${startY}px`;
+                sharedProton.style.transform = 'none';
+
+                // Force layout reflow
+                void sharedProton.offsetWidth;
+
+                // Compute destination
+                const targetRect = targetAtom.getBoundingClientRect();
+                let targetX = (targetRect.left - simRect.left);
+                let targetY = (targetRect.top - simRect.top) + (targetRect.height/2) - (protonRect.height/2);
+                
+                // Adjust docking position based on reaction
+                if (currentRxn === 'nh3') {
+                    targetX += targetRect.width + 5; // Dock to right of N
+                } else if (currentRxn === 'hcl') {
+                    targetX -= (protonRect.width + 5); // Dock to left of O
+                } else if (currentRxn === 'co3') {
+                    targetX += targetRect.width + 5; // Dock to right of target O
+                }
+
+                // Fly proton!
+                sharedProton.style.left = `${targetX}px`;
+                sharedProton.style.top = `${targetY}px`;
+
+                // 3. Finalize State
+                setTimeout(() => {
+                    // Attach to new parent molecule visually
+                    targetMolecule.appendChild(sharedProton);
+                    sharedProton.style.position = 'absolute';
+                    sharedProton.style.left = 'auto';
+                    sharedProton.style.top = 'auto';
+                    sharedProton.classList.remove('highlight-proton');
+
+                    // Adjust final internal transform based on reaction
+                    if (currentRxn === 'nh3') {
+                        sharedProton.style.transform = `translate(45px, 0px)`;
+                    } else if (currentRxn === 'hcl') {
+                        sharedProton.style.transform = `translate(-45px, 0px)`;
+                    } else if (currentRxn === 'co3') {
+                        sharedProton.style.transform = `translate(65px, 30px)`; // Next to bottom-right O
+                    }
+                    
+                    // Update Labels
+                    const lbl1 = m1.querySelector('.m1-label');
+                    const lbl2 = m2.querySelector('.m2-label');
+                    
+                    lbl1.innerHTML = conf.lbl1End;
+                    lbl1.classList.replace(conf.col1, conf.col1End);
+                    
+                    lbl2.innerHTML = conf.lbl2End;
+                    lbl2.classList.replace(conf.col2, conf.col2End);
+
+                    // Move apart
+                    m1.style.left = '30%';
+                    m2.style.left = '70%';
+
+                    // Fade in products equation
+                    document.getElementById('eq-products').classList.remove('opacity-50');
+                    
+                    // Final Explanation
+                    explanationBox.innerHTML = conf.explEnd;
+                    explanationBox.className = 'mt-8 text-center p-4 rounded-lg bg-emerald-50 text-emerald-800 font-medium min-h-[80px] flex items-center justify-center border border-emerald-200 transition-all duration-300';
+                    
+                }, 1500);
+            }, 1000);
+        }
+
+        function initSim() {
+            isReacted = false;
+            btnReact.disabled = false;
+            btnReact.classList.remove('opacity-50', 'cursor-not-allowed');
+            
+            const conf = rxnConfigs[currentRxn];
+            equationContainer.innerHTML = conf.eqHTML;
+            
+            explanationBox.innerHTML = conf.explStart;
+            explanationBox.className = 'mt-8 text-center p-4 rounded-lg bg-blue-50 text-blue-800 font-medium min-h-[80px] flex items-center justify-center border border-blue-100 transition-all duration-300';
+            
+            setupMolecules();
+        }
+
+        // Reaction Selector Events
+        rxnBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                rxnBtns.forEach(b => {
+                    b.classList.remove('bg-emerald-500', 'text-white');
+                    b.classList.add('bg-gray-100', 'text-gray-600');
+                });
+                
+                e.target.classList.remove('bg-gray-100', 'text-gray-600');
+                e.target.classList.add('bg-emerald-500', 'text-white');
+                
+                currentRxn = e.target.getAttribute('data-rxn');
+                initSim();
+            });
+        });
+
+        // Action Events
+        btnReact.addEventListener('click', triggerReaction);
+        btnReset.addEventListener('click', initSim);
+
+        // First Load
+        initSim();
+    });
+</script>
+</body>
+</html>
